@@ -3,11 +3,12 @@ name: Deploy to private server via SSH
 on:
   push:
     branches:
-      - main 
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -15,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18' 
+          node-version: '18'
 
       - name: Install dependencies & build (CI)
         run: |
@@ -25,42 +26,36 @@ jobs:
       - name: Add SSH key and known_hosts
         run: |
           mkdir -p ~/.ssh
-          echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          echo "${{ secrets.KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           chmod 644 ~/.ssh/known_hosts
-        env:
-          KNOWN_HOSTS: ${{ secrets.KNOWN_HOSTS }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Create archive of project to deploy
         run: |
           git ls-files -z | xargs -0 tar -czf deploy.tar.gz
-          
+
       - name: Copy archive to remote server
         run: |
-          scp -P ${{ secrets.REMOTE_PORT }} deploy.tar.gz ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:$REMOTE_APP_DIR/
-        env:
-          REMOTE_APP_DIR: ${{ secrets.REMOTE_APP_DIR }}
+          scp -o StrictHostKeyChecking=no -P ${{ secrets.REMOTE_PORT }} deploy.tar.gz \
+          ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_APP_DIR }}/
 
       - name: Remote deploy: unzip, install and restart
         run: |
-          ssh -p ${{ secrets.REMOTE_PORT }} ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} bash -s << 'EOF'
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.REMOTE_PORT }} \
+          ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "
             set -e
-            mkdir -p "$REMOTE_APP_DIR"
-            cd "$REMOTE_APP_DIR"
-            # descomprimir
-            tar -xzf deploy.tar.gz -C "$REMOTE_APP_DIR"
-            # instalar producción (si incluyes package.json)
+            mkdir -p '${{ secrets.REMOTE_APP_DIR }}'
+            cd '${{ secrets.REMOTE_APP_DIR }}'
+            tar -xzf deploy.tar.gz
             if [ -f package.json ]; then
               npm install --production
             fi
-            # exportar puerto y reiniciar pm2
             export PORT=${{ secrets.APP_PORT }}
-            # si tienes ecosystem.config.js usa: pm2 reload ecosystem.config.js --env production
-            pm2 startOrReload ecosystem.config.js --env production || \
-            (pm2 start npm --name "mi-app" -- start)
+            if [ -f ecosystem.config.js ]; then
+              pm2 startOrReload ecosystem.config.js --env production
+            else
+              pm2 start npm --name 'mi-app' -- start
+            fi
             pm2 save
-            EOF
-        env:
-          REMOTE_APP_DIR: ${{ secrets.REMOTE_APP_DIR }}
+          "

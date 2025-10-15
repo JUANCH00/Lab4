@@ -8,7 +8,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -38,24 +37,24 @@ jobs:
       - name: Copy archive to remote server
         run: |
           scp -o StrictHostKeyChecking=no -P ${{ secrets.REMOTE_PORT }} deploy.tar.gz \
-          ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_APP_DIR }}/
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_APP_DIR }}/
 
       - name: Remote deploy: unzip, install and restart
         run: |
           ssh -o StrictHostKeyChecking=no -p ${{ secrets.REMOTE_PORT }} \
-          ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "
-            set -e
-            mkdir -p '${{ secrets.REMOTE_APP_DIR }}'
-            cd '${{ secrets.REMOTE_APP_DIR }}'
-            tar -xzf deploy.tar.gz
-            if [ -f package.json ]; then
-              npm install --production
-            fi
-            export PORT=${{ secrets.APP_PORT }}
-            if [ -f ecosystem.config.js ]; then
-              pm2 startOrReload ecosystem.config.js --env production
-            else
-              pm2 start npm --name 'mi-app' -- start
-            fi
-            pm2 save
-          "
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "
+              set -e
+              mkdir -p '${{ secrets.REMOTE_APP_DIR }}'
+              cd '${{ secrets.REMOTE_APP_DIR }}'
+              tar -xzf deploy.tar.gz
+              if [ -f package.json ]; then
+                npm install --production
+              fi
+              export PORT=${{ secrets.APP_PORT }}
+              if [ -f ecosystem.config.js ]; then
+                pm2 startOrReload ecosystem.config.js --env production
+              else
+                pm2 start npm --name 'mi-app' -- start
+              fi
+              pm2 save
+            "

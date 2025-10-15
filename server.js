@@ -14,7 +14,7 @@ const data = {
     categorias: [
         { id: '1', nombre: 'Smartphones', descripcion: 'Teléfonos inteligentes de última generación' },
         { id: '2', nombre: 'Laptops', descripcion: 'Computadoras portátiles' },
-        { id: '3', nombre: 'Audio', descripcion: 'Dispositivos de audio y accesorios' }
+        { id: '3', nombre: 'CarAudio', descripcion: 'Dispositivos de audio y accesorios' }
     ]
 };
 

@@ -3,7 +3,7 @@ name: CI/CD - Deploy to Server
 on:
   push:
     branches:
-      - main 
+      - main
 
 jobs:
   deploy:
@@ -16,7 +16,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18' 
+          node-version: '18'
 
       - name: Install dependencies
         run: npm install
@@ -24,7 +24,17 @@ jobs:
       - name: Run build
         run: npm run build --if-present
 
-      - name: Deploy to server via SSH
+      - name: Upload project to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          source: "."
+          target: "~/lab4"
+
+      - name: Deploy and restart app
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -33,6 +43,6 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           script: |
             cd ~/lab4
-            git pull origin main
             npm install --production
             pm2 restart all || pm2 start npm --name "app" -- run start
+            pm2 save
